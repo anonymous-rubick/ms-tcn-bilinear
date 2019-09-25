@@ -15,10 +15,17 @@ Our code is developped based on the following work, the github repo of which is 
 
 ## Implementation
 Our implementation is based on Python 3 and PyTorch 1.1. One neets to notice the model path in the main.py file. To train from scratch, one can run
-        >sh script_run_trainval.sh $dataset $pooling $dropout $epoch
- 
 
+    sh script_run_trainval.sh $dataset $pooling $dropout $epoch
+    
+For example, to train on the _50Salads_ dataset with _RPGaussian_ method and 0.7 dropout ratio for 70 epochs. One should run in the terminal
 
+    sh script_run_trainval.sh 50salads RPGaussian 0.7 70
+    
+To reproduce Tab.2 in our manuscript without checkpoints, one needs to download our checkpoints, and save them into the ''model'' folder. Then, one can run the following to perform inference.
+
+    sh script_run_val.sh 50salads RPGaussian 0.7 70
+    
 
 
 ## Data
