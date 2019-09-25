@@ -22,7 +22,7 @@ For example, to train on the **50Salads** dataset with **RPGaussian** method and
 
     sh script_run_trainval.sh 50salads RPGaussian 0.7 70
     
-To reproduce Tab.2 in our manuscript without checkpoints, one needs to download our checkpoints, and save them into the __models__ folder. Then, one can run the following to perform inference.
+To reproduce Tab.2 in our manuscript, one needs to download our checkpoints, and save them into the __models__ folder. Then, one can perform inference by for example running
 
     sh script_run_val.sh 50salads RPGaussian 0.7 70
     
