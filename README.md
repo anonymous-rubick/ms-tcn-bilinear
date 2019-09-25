@@ -2,7 +2,7 @@
 
 
 
-Our code is developped based on:
+Our code is developped based on the following work, the github repo of which is [here](https://github.com/yabufarha/ms-tcn).
 
     @inproceedings{farha2019ms,
       title={Ms-tcn: Multi-stage temporal convolutional network for action segmentation},
