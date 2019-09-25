@@ -36,6 +36,6 @@ Please put these two folders in to the __data__ folder.
 
 
 ## checkpoints
-Please put these checkpoints folders in to the __models__ folder.
+Please put these checkpoints folders in to the __models__ folder, for reproducing the results in Tab. 2.
 
 [download](https://drive.google.com/drive/folders/1vCu3Srj90KefPDVkY3v29pX8T9FGq26l?usp=sharing)
