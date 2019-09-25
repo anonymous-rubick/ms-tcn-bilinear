@@ -29,9 +29,11 @@ To reproduce Tab.2 in our manuscript without checkpoints, one needs to download 
 
 
 ## Data
+Please put these two folders in to the *data* folder.
 [download](https://drive.google.com/drive/folders/16U-rtxgSe6udBNiJPVQppjiRgjezDu9O?usp=sharing)
 
 
 
 ## checkpoints
+Please put these checkpoints folders in to the *model* folder.
 [download](https://drive.google.com/drive/folders/1vCu3Srj90KefPDVkY3v29pX8T9FGq26l?usp=sharing)
