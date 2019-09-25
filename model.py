@@ -318,101 +318,6 @@ class RPGaussianPoolingFull(nn.Module):
         return out
 
 
-# class RPGaussianPoolingApprox(nn.Module):
-#     def __init__(self, 
-#                  n_basis=8, 
-#                  n_rank=4,
-#                  init_sigma = None,
-#                  use_normalization=False):
-#         super(RPGaussianPoolingApprox, self).__init__()
-#         self.n_basis = n_basis
-#         self.n_rank = n_rank
-#         self.in_dim=64
-#         self.init_sigma = init_sigma
-#         self.E_list = nn.ParameterList([])
-#         self.F_list = nn.ParameterList([])
-#         self.sigma_list = nn.ParameterList([])
-#         self.rho_list = nn.ParameterList([])
-#         self.E_b_list = nn.ParameterList([])
-#         self.F_b_list = nn.ParameterList([])
-
-#         self.use_normalization = use_normalization
-#         np.random.seed(seed=1538574472)
-
-#         if self.init_sigma is None:
-#             self.init_sigma = np.sqrt(self.in_dim)
-
-
-#         for r in range(self.n_rank):
-#             Er_np_G = np.random.standard_normal([self.in_dim, self.in_dim])
-#             Er_np_square,_ = np.linalg.qr(Er_np_G)
-#             Er_np = Er_np_square[:, :self.n_basis]
-#             sigma_r = Parameter(torch.tensor(self.init_sigma, 
-#                                    dtype=torch.float32, 
-#                                    device=torch.device('cuda:0')),
-#                                 requires_grad=True)
-#             self.sigma_list.append(sigma_r)
-#             Er = Parameter(torch.tensor(Er_np,dtype=torch.float32,
-#                                         device=torch.device('cuda:0')), 
-#                            requires_grad=False)
-#             self.E_list.append(Er)
-#             E_b_r = Parameter(torch.tensor(0.0, 
-#                                    dtype=torch.float32, 
-#                                    device=torch.device('cuda:0')),
-#                                 requires_grad=True)
-#             self.E_b_list.append(E_b_r)
-                               
-#             Fr_np_G = np.random.standard_normal([self.in_dim, self.in_dim])
-#             Fr_np_square,_ = np.linalg.qr(Fr_np_G)
-#             Fr_np = Fr_np_square[:, :self.n_basis]
-#             rho_r = Parameter(torch.tensor(self.init_sigma, 
-#                                    dtype=torch.float32, 
-#                                    device=torch.device('cuda:0')),
-#                                 requires_grad=True)
-#             self.rho_list.append(rho_r)
-#             Fr = Parameter(torch.tensor(Fr_np,dtype=torch.float32,
-#                                         device=torch.device('cuda:0')), 
-#                            requires_grad=False)
-#             self.F_list.append(Fr)
-#             F_b_r = Parameter(torch.tensor(0.0, 
-#                                    dtype=torch.float32, 
-#                                    device=torch.device('cuda:0')),
-#                                 requires_grad=True)
-#             self.F_b_list.append(F_b_r)
-
-#     def channel_max_normalization(self, x):
-#         max_vals = torch.max(torch.abs(x), dim=1, keepdim=True)[0]
-#         return x / (max_vals+1e-5)
-
-
-#     def forward(self, x):
-#         """
-#         input feature x: [batch, feature_dim, time]
-#         """
-#         in_time = x.shape[2]
-
-#         z = 0
-#         for r in range(self.n_rank):
-            
-#             Er = np.sqrt(self.in_dim)/(1e-5+torch.abs(self.sigma_list[r])) * self.E_list[r] 
-#             Fr = np.sqrt(self.in_dim)/(1e-5+torch.abs(self.rho_list[r])) * self.F_list[r] 
-            
-#             xer = torch.matmul(x.permute([0,2,1]), Er).unsqueeze(-1) + self.E_b_list[r]
-#             xfr = torch.matmul(x.permute([0,2,1]), Fr).unsqueeze(-2) + self.F_b_list[r]
-#             zr = torch.matmul(xer, xfr).view(-1, in_time, self.n_basis**2)
-#             z+=zr.permute(0, 2, 1)
-
-#         out = z / float(self.n_rank)
-
-#         if self.use_normalization:
-#             out = torch.sign(out) * (torch.sqrt(torch.abs(out)+1e-2)-np.sqrt(1e-2))
-#             # out = torch.sign(out) * torch.sqrt(torch.abs(out))
-#             # out = F.normalize(out, p=2, dim=1)
-#             out = self.channel_max_normalization(out)
-
-#         return out
-
-
 
 
 
@@ -560,7 +465,7 @@ class SingleStageModel(nn.Module):
                                                    n_rank=4, 
                                                    init_sigma=sqrt_dim,
                                                    use_normalization=True)
-        elif pooling_type=='MLB':
+        elif pooling_type=='Hadamard':
             self.bilinear_layer = MLBPooling(n_basis=dim_factor**2 *num_f_maps,
                                              use_normalization=True)
         elif pooling_type=='FBM':
@@ -577,19 +482,14 @@ class SingleStageModel(nn.Module):
 
     def forward(self, x):
         out = self.conv_1x1(x)
-        #out = self.bilinear_layer(out)
-        #out = self.conv_1x1_b(out)
 
         for layer in self.layers:
             out = layer(out)
 
-        ####### apply bilinear pooling here! ####
-        # print(out)
+        ####### apply bilinear residual module here! ####
         out2 = self.bilinear_layer(out)
         out2 = self.conv_1x1_b(out2)
         out2 = self.drop(out2)
-        # # print(out)
-        # out = torch.cat([out, out1], dim=1)
         # #########################################
         out = self.conv_out(out)
 
