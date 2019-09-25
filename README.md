@@ -27,6 +27,39 @@ To reproduce Tab.2 in our manuscript, one needs to download our checkpoints, and
     sh script_run_val.sh 50salads RPGaussian 0.7 70
     
 
+Then, one will see the evaluation for individual splits, such as 
+
+        ---------------final results -------------------
+        Acc: 77.2142
+        Edit: 64.9321
+        F1@0.10: 72.3493
+        F1@0.25: 69.8545
+        F1@0.50: 59.4595
+        Acc: 80.5537
+        Edit: 74.8293
+        F1@0.10: 80.8717
+        F1@0.25: 78.4504
+        F1@0.50: 68.7651
+        Acc: 80.9786
+        Edit: 70.8362
+        F1@0.10: 78.4689
+        F1@0.25: 77.0335
+        F1@0.50: 69.3780
+        Acc: 80.9601
+        Edit: 71.7944
+        F1@0.10: 78.3599
+        F1@0.25: 75.6264
+        F1@0.50: 66.9704
+        Acc: 83.4894
+        Edit: 72.5606
+        F1@0.10: 81.7043
+        F1@0.25: 78.1955
+        F1@0.50: 68.6717
+
+
+The final performance is given by averaging each metric score.
+
+
 
 ## Data
 Please put these two folders in to the __data__ folder.
