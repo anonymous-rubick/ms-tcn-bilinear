@@ -26,7 +26,8 @@ parser.add_argument('--pooling', default='RPGaussian')
 parser.add_argument('--dropout', default='0.7')
 parser.add_argument('--epoch', default='70')
 
-
+import sys
+sys.path.append("/home/yzhang/workspaces/ms-tcn-bilinear")
 
 args = parser.parse_args()
 
@@ -34,6 +35,7 @@ num_stages = 4
 num_layers = 10
 num_f_maps = 64
 features_dim = 2048
+
 # bz=1 # original
 bz = 1
 # lr=0.0005 # original
@@ -71,7 +73,7 @@ mapping_file = "./data/"+args.dataset+"/mapping.txt"
 # model_dir = "./models/"+args.dataset+"_{}_dropout{}_ep{}/split_".format(pooling_type,dropout,num_epochs)+args.split
 # model_dir="./models/model_backup/"+args.dataset+"_gaussian_dropout{}_ep{}_right/split_".format(dropout,num_epochs)+args.split
 # model_dir = "/home/yzhang/workspaces/ms-tcn-bilinear/models/"+args.dataset+"_{}_dropout{}_ep{}/split_".format(pooling_type,dropout,num_epochs)+args.split
-model_dir = "./models/model_backup/"+args.dataset+"_{}_dropout{}_ep{}/split_".format(pooling_type,dropout,num_epochs)+args.split
+model_dir = "./models/checkpoints/"+args.dataset+"_{}_dropout{}_ep{}/split_".format(pooling_type,dropout,num_epochs)+args.split
 
 results_dir = "./results/"+args.dataset+"/split_"+args.split
  

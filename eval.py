@@ -40,6 +40,7 @@ def get_labels_start_end_time(frame_wise_labels, bg_class=["background"]):
     return labels, starts, ends
 
 
+
 def levenstein(p, y, norm=False):
     m_row = len(p)    
     n_col = len(y)
@@ -124,6 +125,7 @@ def main():
         
         recog_file = recog_path + vid.split('.')[0]
         recog_content = read_file(recog_file).split('\n')[1].split()
+
 
         for i in range(len(gt_content)):
             total += 1

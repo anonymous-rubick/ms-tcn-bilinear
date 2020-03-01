@@ -417,18 +417,27 @@ class MLBPooling(nn.Module):
 
 
 
-
-
-
-
 class MultiStageModel(nn.Module):
     def __init__(self, num_stages, num_layers, num_f_maps, dim, num_classes,
-        pooling_type, dropout):
+                 pooling_type, dropout):
         super(MultiStageModel, self).__init__()
-        self.stage1 = SingleStageModel(num_layers, num_f_maps, dim, num_classes,
-            pooling_type=pooling_type, dropout=dropout)
-        self.stages = nn.ModuleList([copy.deepcopy(SingleStageModel(num_layers, num_f_maps, num_classes, num_classes,
-            pooling_type=pooling_type, dropout=dropout)) for s in range(num_stages-1)])
+
+        if pooling_type in ['RPGaussian', 'RPBinary', 'RPGaussianFull', 'Hadamard', 'FBM']:
+
+            self.stage1 = SingleStageModelBilinear(num_layers, num_f_maps, dim, num_classes,
+                                            pooling_type=pooling_type, 
+                                            dropout=dropout)
+            self.stages = nn.ModuleList([copy.deepcopy(SingleStageModelBilinear(num_layers, 
+                                            num_f_maps, num_classes, num_classes,
+                                            pooling_type=pooling_type, dropout=dropout)) 
+                                        for s in range(num_stages-1)])
+
+        else:
+            self.stage1 = SingleStageModel(num_layers, num_f_maps, dim, num_classes)
+            self.stages = nn.ModuleList([copy.deepcopy(SingleStageModel(num_layers, 
+                                                num_f_maps, num_classes, num_classes)) 
+                                        for s in range(num_stages-1)])
+
 
     def forward(self, x):
         out = self.stage1(x)
@@ -440,10 +449,30 @@ class MultiStageModel(nn.Module):
 
 
 
+
 class SingleStageModel(nn.Module):
+    def __init__(self, num_layers, num_f_maps, dim, num_classes):
+        super(SingleStageModel, self).__init__()
+        self.conv_1x1 = nn.Conv1d(dim, num_f_maps, 1)
+        self.layers = nn.ModuleList([copy.deepcopy(DilatedResidualLayer(2 ** i, num_f_maps, num_f_maps)) for i in range(num_layers)])
+        self.conv_out = nn.Conv1d(num_f_maps, num_classes, 1)
+
+    def forward(self, x):
+        out = self.conv_1x1(x)
+        for layer in self.layers:
+            out = layer(out)
+        out = self.conv_out(out)
+        return out
+
+
+
+
+
+
+class SingleStageModelBilinear(nn.Module):
     def __init__(self, num_layers, num_f_maps, dim, num_classes,
         pooling_type, dropout):
-        super(SingleStageModel, self).__init__()
+        super(SingleStageModelBilinear, self).__init__()
         sqrt_dim = np.sqrt(num_f_maps)
         dim_factor = 2
         self.conv_1x1 = nn.Conv1d(dim, num_f_maps, 1)
@@ -473,11 +502,9 @@ class SingleStageModel(nn.Module):
                                       use_normalization=True)
 
         else:
-            print('[Error]: no such bilinear layer')
+            print('[Error]: no such bilinear layer. Use standard ms-tcn')
         # self.w_1st = nn.Parameter(torch.tensor(0.5, dtype=torch.float32).cuda(), requires_grad=True)
         # self.w_2nd = nn.Parameter(torch.tensor(0.5, dtype=torch.float32).cuda(), requires_grad=True)
-
-
 
 
     def forward(self, x):
@@ -536,7 +563,7 @@ class Trainer:
         optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         #epoch_pre=50
         #self.model.load_state_dict(torch.load(save_dir + "/epoch-" + str(epoch_pre) + ".model"))
-        acc_pre = 0
+
         for epoch in range(num_epochs):
             #if epoch < epoch_pre:
             #   epoch+=1
