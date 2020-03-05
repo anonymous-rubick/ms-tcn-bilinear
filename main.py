@@ -75,7 +75,7 @@ mapping_file = "./data/"+args.dataset+"/mapping.txt"
 # model_dir = "/home/yzhang/workspaces/ms-tcn-bilinear/models/"+args.dataset+"_{}_dropout{}_ep{}/split_".format(pooling_type,dropout,num_epochs)+args.split
 model_dir = "./models/checkpoints/"+args.dataset+"_{}_dropout{}_ep{}/split_".format(pooling_type,dropout,num_epochs)+args.split
 
-results_dir = "./results/"+args.dataset+"/split_"+args.split
+results_dir = "./results/"+args.dataset+"_{}/split_".format(pooling_type)+args.split
  
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)

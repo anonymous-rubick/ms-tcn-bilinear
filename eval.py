@@ -103,12 +103,16 @@ def main():
 
     parser.add_argument('--dataset', default="gtea")
     parser.add_argument('--split', default='1')
+    parser.add_argument('--pooling', default='FirstOrder')
+
 
     args = parser.parse_args()
 
     ground_truth_path = "./data/"+args.dataset+"/groundTruth/"
-    recog_path = "./results/"+args.dataset+"/split_"+args.split+"/"
+    # recog_path = "./results/"+args.dataset+"/split_"+args.split+"/"
+    recog_path="./results/"+args.dataset+"_{}/split_".format(args.pooling)+args.split+"/"
     file_list = "./data/"+args.dataset+"/splits/test.split"+args.split+".bundle"
+    
 
     list_of_videos = read_file(file_list).split('\n')[:-1]
 

@@ -19,17 +19,16 @@ fi
 
 
 
-for i in $splits;
-do
-	python main.py --action=predict --dataset=$dataset --split=$i --pooling=$pooling --dropout=$dropout --epoch=$epoch
-
-        python eval.py --dataset=$dataset --split=$i
-	echo $dataset training/eval done: split-"$i"
-done
+# for i in $splits;
+# do
+# 	python main.py --action=predict --dataset=$dataset --split=$i --pooling=$pooling --dropout=$dropout --epoch=$epoch
+#         python eval.py --dataset=$dataset --split=$i --pooling=$pooling
+# 	echo $dataset training/eval done: split-"$i"
+# done
 
 echo ---------------final results -------------------
 
 for i in $splits;
 do
-        python eval.py --dataset=$dataset --split=$i
+        python eval.py --dataset=$dataset --split=$i --pooling=$pooling
 done

@@ -71,11 +71,6 @@ class FBM(nn.Module):
 
 
 
-
-
-
-
-
 class RPBinaryPooling(nn.Module):
     def __init__(self, 
                  n_basis=8, 
@@ -165,6 +160,10 @@ class RPGaussianPooling(nn.Module):
         if self.init_sigma is None:
             self.init_sigma = np.sqrt(self.in_dim)
 
+        self.alpha = Parameter(torch.tensor(1e-1, 
+                                   dtype=torch.float32, 
+                                   device=torch.device('cuda:0')),
+                                requires_grad=True)
 
         for r in range(self.n_rank):
             Er_np_G = np.random.standard_normal([self.in_dim, self.in_dim])
@@ -219,7 +218,7 @@ class RPGaussianPooling(nn.Module):
         out = z / (float(self.n_rank))
 
         if self.use_normalization:
-            out = torch.sign(out) * (torch.sqrt(torch.abs(out)+1e-2)-np.sqrt(1e-2))
+            # out = torch.sign(out) * (torch.sqrt(torch.abs(out)+self.alpha**2)-torch.abs(self.alpha))
             # out = torch.sign(out) * torch.sqrt(torch.abs(out))
             # out = F.normalize(out, p=2, dim=1)
             out = self.channel_max_normalization(out)
@@ -422,15 +421,20 @@ class MultiStageModel(nn.Module):
                  pooling_type, dropout):
         super(MultiStageModel, self).__init__()
 
-        if pooling_type in ['RPGaussian', 'RPBinary', 'RPGaussianFull', 'Hadamard', 'FBM']:
+        if pooling_type in ['RPGaussian', 'RPBinary', 'RPGaussianFull', 'Hadamard', 'FBM', 'RPGaussianNorm']:
 
             self.stage1 = SingleStageModelBilinear(num_layers, num_f_maps, dim, num_classes,
                                             pooling_type=pooling_type, 
                                             dropout=dropout)
-            self.stages = nn.ModuleList([copy.deepcopy(SingleStageModelBilinear(num_layers, 
-                                            num_f_maps, num_classes, num_classes,
-                                            pooling_type=pooling_type, dropout=dropout)) 
+            # self.stages = nn.ModuleList([copy.deepcopy(SingleStageModelBilinear(num_layers, 
+            #                                 num_f_maps, num_classes, num_classes,
+            #                                 pooling_type=pooling_type, dropout=dropout)) 
+            #                             for s in range(num_stages-1)])
+            self.stages = nn.ModuleList([copy.deepcopy(SingleStageModel(num_layers, 
+                                                num_f_maps, num_classes, num_classes)) 
                                         for s in range(num_stages-1)])
+
+
 
         else:
             self.stage1 = SingleStageModel(num_layers, num_f_maps, dim, num_classes)
@@ -439,11 +443,11 @@ class MultiStageModel(nn.Module):
                                         for s in range(num_stages-1)])
 
 
-    def forward(self, x):
-        out = self.stage1(x)
+    def forward(self, x, mask):
+        out = self.stage1(x, mask)
         outputs = out.unsqueeze(0)
         for s in self.stages:
-            out = s(F.softmax(out, dim=1))
+            out = s(F.softmax(out, dim=1)*mask[:,0:1,:],mask)
             outputs = torch.cat((outputs, out.unsqueeze(0)), dim=0)
         return outputs
 
@@ -457,15 +461,12 @@ class SingleStageModel(nn.Module):
         self.layers = nn.ModuleList([copy.deepcopy(DilatedResidualLayer(2 ** i, num_f_maps, num_f_maps)) for i in range(num_layers)])
         self.conv_out = nn.Conv1d(num_f_maps, num_classes, 1)
 
-    def forward(self, x):
+    def forward(self, x, mask):
         out = self.conv_1x1(x)
         for layer in self.layers:
-            out = layer(out)
-        out = self.conv_out(out)
+            out = layer(out, mask)
+        out = self.conv_out(out) * mask[:,0:1,:]
         return out
-
-
-
 
 
 
@@ -473,8 +474,10 @@ class SingleStageModelBilinear(nn.Module):
     def __init__(self, num_layers, num_f_maps, dim, num_classes,
         pooling_type, dropout):
         super(SingleStageModelBilinear, self).__init__()
+
         sqrt_dim = np.sqrt(num_f_maps)
         dim_factor = 2
+        
         self.conv_1x1 = nn.Conv1d(dim, num_f_maps, 1)
         self.layers = nn.ModuleList([copy.deepcopy(DilatedResidualLayer(2 ** i, num_f_maps, num_f_maps)) for i in range(num_layers)])
         self.conv_out = nn.Conv1d(num_f_maps, num_classes, 1, padding=0)
@@ -483,23 +486,31 @@ class SingleStageModelBilinear(nn.Module):
         if pooling_type=='RPBinary':
             self.bilinear_layer = RPBinaryPooling(n_basis=int(dim_factor*sqrt_dim), 
                                                  n_rank=4, 
-                                                 use_normalization=True)
-        elif pooling_type=='RPGaussian':
+                                                 use_normalization=False)
+        elif pooling_type=='RPGaussianNorm':
             self.bilinear_layer = RPGaussianPooling(n_basis=int(dim_factor*sqrt_dim), 
                                                    n_rank=4, 
                                                    init_sigma=sqrt_dim,
                                                    use_normalization=True)
+
+        elif pooling_type=='RPGaussian':
+            self.bilinear_layer = RPGaussianPooling(n_basis=int(dim_factor*sqrt_dim), 
+                                                   n_rank=4, 
+                                                   init_sigma=sqrt_dim,
+                                                   use_normalization=False)
+
+
         elif pooling_type == 'RPGaussianFull':
             self.bilinear_layer = RPGaussianPoolingFull(n_basis=int(dim_factor*sqrt_dim), 
                                                    n_rank=4, 
                                                    init_sigma=sqrt_dim,
-                                                   use_normalization=True)
+                                                   use_normalization=False)
         elif pooling_type=='Hadamard':
             self.bilinear_layer = MLBPooling(n_basis=dim_factor**2 *num_f_maps,
-                                             use_normalization=True)
+                                             use_normalization=False)
         elif pooling_type=='FBM':
             self.bilinear_layer = FBM(n_basis=dim_factor**2 *num_f_maps,
-                                      use_normalization=True)
+                                      use_normalization=False)
 
         else:
             print('[Error]: no such bilinear layer. Use standard ms-tcn')
@@ -507,24 +518,21 @@ class SingleStageModelBilinear(nn.Module):
         # self.w_2nd = nn.Parameter(torch.tensor(0.5, dtype=torch.float32).cuda(), requires_grad=True)
 
 
-    def forward(self, x):
+    def forward(self, x, mask):
         out = self.conv_1x1(x)
 
         for layer in self.layers:
-            out = layer(out)
+            out = layer(out, mask)
 
         ####### apply bilinear residual module here! ####
         out2 = self.bilinear_layer(out)
         out2 = self.conv_1x1_b(out2)
-        out2 = self.drop(out2)
+        # out2 = self.drop(out2)
         # #########################################
-        out = self.conv_out(out)
+        # out = self.conv_out(out)
 
-        return (out+out2)/2.0
-
-
-
-
+        # return (out2 + out)*0.5 * mask[:,0:1,:]
+        return out2 * mask[:,0:1,:]
 
 
 class DilatedResidualLayer(nn.Module):
@@ -535,11 +543,12 @@ class DilatedResidualLayer(nn.Module):
         self.dropout = nn.Dropout()
         
 
-    def forward(self, x):
+    def forward(self, x, mask):
         out = F.relu(self.conv_dilated(x))
         out = self.conv_1x1(out)
         out = self.dropout(out)
-        return x + out
+        return (x + out) * mask[:,0:1,:]
+
 
 
 
@@ -576,7 +585,7 @@ class Trainer:
                 batch_input, batch_target, mask = batch_gen.next_batch(batch_size)
                 batch_input, batch_target, mask = batch_input.to(device), batch_target.to(device), mask.to(device)
                 optimizer.zero_grad()
-                predictions = self.model(batch_input)
+                predictions = self.model(batch_input, mask)
 
                 loss = 0
                 for p in predictions:
@@ -622,7 +631,7 @@ class Trainer:
                 input_x = torch.tensor(features, dtype=torch.float)
                 input_x.unsqueeze_(0)
                 input_x = input_x.to(device)
-                predictions = self.model(input_x)
+                predictions = self.model(input_x, torch.ones(input_x.size(), device=device))
                 _, predicted = torch.max(predictions[-1].data, 1)
                 predicted = predicted.squeeze()
                 recognition = []
